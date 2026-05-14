@@ -9,11 +9,12 @@ import { AuthProvider } from './context/AuthContext'
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify'
 import DeletarPostagem from './components/postagem/deletarpostagem/DeletarPostagen'
-import Footer from './components/Footer/Footer'
-import Navbar from './components/Navbar/Navbar'
-import Cadastro from './pages/Cadastro/Cadastro'
-import Home from './pages/Home/Home'
-import Login from './pages/Login/Login'
+import Footer from './components/footer/footer'
+import Navbar from './components/navbar/navbar'
+import Cadastro from './pages/cadastro/cadastro'
+import Home from './pages/home/home'
+import Login from './pages/login/login'
+
 
 function App() {
 	return (
