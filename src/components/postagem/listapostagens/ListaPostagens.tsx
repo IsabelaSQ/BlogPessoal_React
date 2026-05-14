@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/immutability */
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -6,6 +6,7 @@ import { SyncLoader } from "react-spinners";
 import type Postagem from "../../../models/Postagem";
 import { buscar } from "../../../services/Service";
 import CardPostagem from "../cardpostagem/CardPostagem";
+import { ToastAlerta } from "../../../utils/ToastAlerta";
 import { AuthContext } from "../../../context/AuthContext";
 
 function ListaPostagens() {
@@ -21,13 +22,12 @@ function ListaPostagens() {
 
     useEffect(() => {
         if (token === '') {
-            alert('Você precisa estar logado!')
+            ToastAlerta('Você precisa estar logado!', 'info')
             navigate('/')
         }
     }, [token])
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/immutability
         buscarPostagens()    
     }, [postagens.length])
 
@@ -36,11 +36,11 @@ function ListaPostagens() {
 
             setIsLoading(true)
 
-            await buscar('/postagens', setPostagens, {
+            await buscar('/postagem', setPostagens, {
                 headers: { Authorization: token }
             })
-        } catch (error: any) {
-            if (error.toString().includes('401')) {
+        } catch (error: unknown) {
+            if (error instanceof Error && error.toString().includes('401')) {
                 handleLogout()
             }
         }finally {

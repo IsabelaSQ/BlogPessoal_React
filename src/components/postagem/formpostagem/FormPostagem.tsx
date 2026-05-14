@@ -1,12 +1,13 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { useContext, useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ClipLoader } from "react-spinners";
 import type Postagem from "../../../models/Postagem";
 import type Tema from "../../../models/Tema";
 import { atualizar, buscar, cadastrar } from "../../../services/Service";
+import { ToastAlerta } from "../../../utils/ToastAlerta";
 import { AuthContext } from "../../../context/AuthContext";
 
 function FormPostagem() {
@@ -17,12 +18,9 @@ function FormPostagem() {
 
     const [temas, setTemas] = useState<Tema[]>([])
 
-    const [tema, setTema] = useState<Tema>({ id: 0, descricao: '' })
-
-    const [postagem, setPostagem] = useState<Postagem>({
-        titulo: '',
-        texto: '',
-    } as Postagem)
+    const [tema, setTema] = useState<Tema>({ id: 0, descricao: '', })
+    
+    const [postagem, setPostagem] = useState<Postagem>({} as Postagem)
 
     const { usuario, handleLogout } = useContext(AuthContext)
     const token = usuario.token
@@ -31,11 +29,23 @@ function FormPostagem() {
 
     async function buscarPostagemPorId(id: string) {
         try {
-            await buscar(`/postagens/${id}`, setPostagem, {
+            await buscar(`/postagem/${id}`, setPostagem, {
                 headers: { Authorization: token }
             })
-        } catch (error: any) {
-            if (error.toString().includes('401')) {
+        } catch (error: unknown) {
+            if (error instanceof Error && error.toString().includes('401')) {
+                handleLogout()
+            }
+        }
+    }
+
+    async function buscarTemaPorId(id: string) {
+        try {
+            await buscar(`/temas/${id}`, setTema, {
+                headers: { Authorization: token }
+            })
+        } catch (error: unknown) {
+            if (error instanceof Error && error.toString().includes('401')) {
                 handleLogout()
             }
         }
@@ -46,8 +56,8 @@ function FormPostagem() {
             await buscar('/temas', setTemas, {
                 headers: { Authorization: token }
             })
-        } catch (error: any) {
-            if (error.toString().includes('401')) {
+        } catch (error: unknown) {
+            if (error instanceof Error && error.toString().includes('401')) {
                 handleLogout()
             }
         }
@@ -55,7 +65,7 @@ function FormPostagem() {
 
     useEffect(() => {
         if (token === '') {
-            alert('Você precisa estar logado');
+            ToastAlerta('Você precisa estar logado', 'info');
             navigate('/');
         }
     }, [token])
@@ -69,17 +79,11 @@ function FormPostagem() {
     }, [id])
 
     useEffect(() => {
-        setPostagem(prev => ({
-            ...prev,
+        setPostagem({
+            ...postagem,
             tema: tema,
-        }))
+        })
     }, [tema])
-
-    useEffect(() => {
-        if (postagem.tema && postagem.tema.id !== 0) {
-            setTema(postagem.tema)
-        }
-    }, [postagem.tema?.id])
 
     function atualizarEstado(e: ChangeEvent<HTMLInputElement>) {
         setPostagem({
@@ -88,14 +92,6 @@ function FormPostagem() {
             tema: tema,
             usuario: usuario,
         });
-    }
-
-    // ✅ CORRIGIDO: busca o tema direto do array local, sem chamada extra na API
-    function handleTemaChange(e: ChangeEvent<HTMLSelectElement>) {
-        const temaSelecionado = temas.find(t => String(t.id) === e.currentTarget.value)
-        if (temaSelecionado) {
-            setTema(temaSelecionado)
-        }
     }
 
     function retornar() {
@@ -108,37 +104,37 @@ function FormPostagem() {
 
         if (id !== undefined) {
             try {
-                await atualizar(`/postagens`, postagem, setPostagem, {
+                await atualizar(`/postagem`, postagem, setPostagem, {
                     headers: {
                         Authorization: token,
                     },
                 });
 
-                alert('Postagem atualizada com sucesso')
+                ToastAlerta('Postagem atualizada com sucesso', 'sucesso')
 
-            } catch (error: any) {
-                if (error.toString().includes('401')) {
+            } catch (error: unknown) {
+                if (error instanceof Error && error.toString().includes('401')) {
                     handleLogout()
                 } else {
-                    alert('Erro ao atualizar a Postagem')
+                    ToastAlerta('Erro ao atualizar a Postagem', 'erro')
                 }
             }
 
         } else {
             try {
-                await cadastrar(`/postagens`, postagem, setPostagem, {
+                await cadastrar(`/postagem`, postagem, setPostagem, {
                     headers: {
                         Authorization: token,
                     },
                 })
 
-                alert('Postagem cadastrada com sucesso');
+                ToastAlerta('Postagem cadastrada com sucesso', 'sucesso');
 
-            } catch (error: any) {
-                if (error.toString().includes('401')) {
+            } catch (error: unknown) {
+                if (error instanceof Error && error.toString().includes('401')) {
                     handleLogout()
                 } else {
-                    alert('Erro ao cadastrar a Postagem');
+                    ToastAlerta('Erro ao cadastrar a Postagem', 'erro');
                 }
             }
         }
@@ -147,13 +143,13 @@ function FormPostagem() {
         retornar()
     }
 
-    // ✅ CORRIGIDO: botão desabilitado só se nenhum tema foi selecionado (id === 0)
-    const carregandoTema = tema.id === 0;
+    const carregandoTema = tema.descricao === '';
+
 
     return (
         <div className="container flex flex-col mx-auto items-center">
             <h1 className="text-4xl text-center my-8">
-                {id !== undefined ? 'Editar Postagem' : 'Cadastrar Postagem'}
+                 {id !== undefined ? 'Editar Postagem' : 'Cadastrar Postagem'}
             </h1>
 
             <form className="flex flex-col w-1/2 gap-4"
@@ -164,58 +160,53 @@ function FormPostagem() {
                         type="text"
                         placeholder="Titulo"
                         name="titulo"
-                        id="titulo"
                         required
                         className="border-2 border-slate-700 rounded p-2"
                         value={postagem.titulo}
-                        onChange={atualizarEstado}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => atualizarEstado(e)}
                     />
                 </div>
                 <div className="flex flex-col gap-2">
-                    <label htmlFor="texto">Texto da Postagem</label>
+                    <label htmlFor="titulo">Texto da Postagem</label>
                     <input
                         type="text"
                         placeholder="Texto"
                         name="texto"
-                        id="texto"
                         required
                         className="border-2 border-slate-700 rounded p-2"
-                        value={postagem.texto}
-                        onChange={atualizarEstado}
+                         value={postagem.texto}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => atualizarEstado(e)}
                     />
                 </div>
                 <div className="flex flex-col gap-2">
                     <p>Tema da Postagem</p>
-                    {/* ✅ CORRIGIDO: defaultValue para o placeholder, value controlado, key no option */}
-                    <select
-                        name="tema"
-                        id="tema"
-                        className="border p-2 border-slate-800 rounded"
-                        value={tema.id || ''}
-                        onChange={handleTemaChange}
+                    <select name="tema" id="tema" className='border p-2 border-slate-800 rounded' 
+                        onChange={(e) => buscarTemaPorId(e.currentTarget.value)}
                     >
-                        <option value="" disabled>Selecione um Tema</option>
-
+                        <option value="" selected disabled>Selecione um Tema</option>
+                        
                         {temas.map((tema) => (
-                            <option key={tema.id} value={tema.id}>
-                                {tema.descricao}
-                            </option>
+                            <>
+                                <option value={tema.id} >{tema.descricao}</option>
+                            </>
                         ))}
+
                     </select>
                 </div>
-                <button
-                    type='submit'
+                <button 
+                    type='submit' 
                     className='rounded disabled:bg-slate-200 bg-indigo-400 hover:bg-indigo-800
                                text-white font-bold w-1/2 mx-auto py-2 flex justify-center'
-                    disabled={carregandoTema}
+                               disabled={carregandoTema}
                 >
-                    {isLoading ?
-                        <ClipLoader
-                            color="#ffffff"
-                            size={24}
-                        /> :
-                        <span>{id === undefined ? 'Cadastrar' : 'Atualizar'}</span>
+                    { isLoading ? 
+                            <ClipLoader 
+                                color="#ffffff" 
+                                size={24}
+                            /> : 
+                           <span>{id === undefined ? 'Cadastrar' : 'Atualizar'}</span>
                     }
+
                 </button>
             </form>
         </div>

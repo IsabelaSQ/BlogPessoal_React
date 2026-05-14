@@ -48,7 +48,7 @@ function Cadastro() {
       try {
         await cadastrarUsuario(`/usuarios/cadastrar`, usuario, setUsuario);
         alert("Usuário cadastrado com sucesso!");
-      } catch (error) {
+      } catch (error: unknown) {
         alert("Erro ao cadastrar o usuário!");
       }
     } else {
